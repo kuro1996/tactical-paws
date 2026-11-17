@@ -73,6 +73,12 @@ node cli/makefun.mjs bundle --repo ~/workspace/makefun-fps/tactical-paws \
 
 Then: `node cli/makefun.mjs check --kit . --repo ~/workspace/makefun-fps/tactical-paws --transcripts transcripts.tar.gz`.
 
+## Dossier pre-check (local run of the kit-verbatim program)
+
+- `MAKEFUN_OUTPUT_DIR=/tmp/dossier-test node main.ts` — exit 0.
+- `dossier.json` = 336,373 bytes (cap 1.5 MiB); dossier text 86,141 bytes (cap 163,840).
+- `game/` = 2.2 MiB, 10 files (cap 48 MiB / 993 files); `game/index.html` 13,451 bytes (cap 1 MiB).
+
 ## Open items
 
 - Elimination-win / match-end screen not yet proven in a run (round-end proven).
