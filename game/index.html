@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Nusantara Strike — 5v5 FPS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1220; font-family: 'Segoe UI', system-ui, sans-serif; color: #eef2f7; }
+  canvas.game { display: block; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---------- Vignette & damage ---------- */
+  #vig { position: fixed; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(ellipse at center, transparent 55%, rgba(120,170,220,0.28) 100%); }
+  #dmgVig { position: fixed; inset: 0; pointer-events: none; z-index: 6; opacity: 0; transition: opacity .25s; background: radial-gradient(ellipse at center, transparent 45%, rgba(220,40,30,0.55) 100%); }
+  #killFlash { position: fixed; inset: 0; pointer-events: none; z-index: 6; opacity: 0; transition: opacity .12s; background: #fff; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: none; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 8px; }
+  #crosshair i { position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+  #crosshair .t { left: -1px; top: calc(-1 * var(--gap) - 8px); width: 2px; height: 8px; }
+  #crosshair .b { left: -1px; top: var(--gap); width: 2px; height: 8px; }
+  #crosshair .l { top: -1px; left: calc(-1 * var(--gap) - 8px); width: 8px; height: 2px; }
+  #crosshair .r { top: -1px; left: var(--gap); width: 8px; height: 2px; }
+  #crosshair .dot { left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; }
+  #crosshair.spread i { background: #ffd23d; }
+  #hitmarker { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; opacity: 0; border: 2px solid #fff; transform: rotate(45deg); border-radius: 2px; }
+  #topBar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; background: rgba(8,14,26,.72); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 8px 16px; font-weight: 700; }
+  #timerText { font-size: 22px; color: #ffd23d; min-width: 74px; text-align: center; }
+  #scoreText { font-size: 15px; }
+  #roundText { font-size: 13px; color: #9fb4d0; }
+  #minimap { position: absolute; top: 10px; right: 10px; width: 150px; height: 150px; border: 2px solid rgba(255,255,255,.35); border-radius: 8px; background: rgba(8,14,26,.6); }
+  #killfeed { position: absolute; top: 170px; right: 10px; width: 280px; text-align: right; font-size: 13px; }
+  #killfeed .kf { background: rgba(8,14,26,.75); border-radius: 6px; padding: 5px 9px; margin-bottom: 5px; border-right: 3px solid #ff6b5e; }
+  #killfeed .kf.good { border-right-color: #37d67a; }
+  #bottomLeft { position: absolute; left: 14px; bottom: 14px; width: 260px; }
+  #hpBarWrap { height: 16px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.3); border-radius: 8px; overflow: hidden; }
+  #hpBar { height: 100%; width: 100%; background: linear-gradient(90deg, #2fbf5a, #37d67a); transition: width .15s; }
+  #hpText { font-size: 14px; font-weight: 700; margin-top: 4px; text-shadow: 0 1px 3px #000; }
+  #bottomRight { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+  #weaponName { font-size: 15px; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  #ammoText { font-size: 30px; font-weight: 800; text-shadow: 0 2px 4px #000; }
+  #reloadHint { font-size: 13px; color: #ffd23d; font-weight: 700; }
+  #moneyText { font-size: 20px; font-weight: 800; color: #ffd23d; text-shadow: 0 1px 3px #000; }
+  #smokeCount { font-size: 14px; font-weight: 700; }
+  #trainHud { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); background: rgba(8,14,26,.72); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 8px 18px; font-weight: 700; display: none; }
+  #roundIntro { position: absolute; left: 50%; top: 38%; transform: translate(-50%,-50%); font-size: 54px; font-weight: 900; letter-spacing: 4px; color: #fff; text-shadow: 0 4px 18px rgba(0,0,0,.8); opacity: 0; transition: opacity .3s, transform .3s; }
+  #dmgLayer { position: absolute; inset: 0; overflow: hidden; }
+  .dmgNum { position: absolute; font-weight: 800; font-size: 17px; text-shadow: 0 1px 3px #000; transform: translate(-50%,-50%); }
+  #toast { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); background: rgba(8,14,26,.85); border: 1px solid rgba(255,255,255,.25); padding: 9px 18px; border-radius: 9px; font-weight: 700; opacity: 0; transition: opacity .25s; white-space: nowrap; }
+
+  /* ---------- Panel ---------- */
+  .panel { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(5,9,18,.82); backdrop-filter: blur(3px); }
+  .card { width: min(680px, 94vw); max-height: 92vh; overflow-y: auto; background: #101a2c; border: 1px solid rgba(255,255,255,.16); border-radius: 16px; padding: 26px 30px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .card h1 { font-size: 34px; letter-spacing: 1px; }
+  .card h1 .flag { color: #e33; }
+  .card h2 { font-size: 20px; margin-bottom: 10px; }
+  .card p { color: #b9c6d8; line-height: 1.55; margin: 8px 0; font-size: 14.5px; }
+  .btn { display: inline-block; border: none; border-radius: 10px; padding: 13px 26px; font-size: 16px; font-weight: 800; color: #fff; background: #2563eb; }
+  .btn:hover { background: #1d4fd7; }
+  .btn.green { background: #1f9d4d; }
+  .btn.green:hover { background: #17873f; }
+  .btn.ghost { background: rgba(255,255,255,.12); }
+  .btnRow { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .mapPick { display: flex; gap: 10px; margin: 14px 0; }
+  .mapBtn { flex: 1; border: 2px solid rgba(255,255,255,.2); background: #0d1626; color: #eef2f7; border-radius: 12px; padding: 14px; text-align: left; }
+  .mapBtn.sel { border-color: #ffd23d; background: #1a2438; }
+  .mapBtn b { display: block; font-size: 17px; }
+  .mapBtn span { font-size: 13px; color: #9fb4d0; }
+  .keys { font-size: 13px; color: #9fb4d0; line-height: 1.8; }
+  .keys b { color: #eef2f7; background: rgba(255,255,255,.12); border-radius: 4px; padding: 1px 7px; }
+
+  /* ---------- Beli ---------- */
+  #buyMenu { position: fixed; inset: 0; z-index: 18; display: none; background: rgba(5,9,18,.72); }
+  #buyMenu .card { margin: 5vh auto; }
+  #buyGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
+  .buyItem { border: 1px solid rgba(255,255,255,.18); background: #0d1626; border-radius: 10px; padding: 12px; cursor: pointer; }
+  .buyItem:hover { border-color: #ffd23d; }
+  .buyItem.owned { border-color: #37d67a; cursor: default; }
+  .bi-emoji { font-size: 26px; }
+  .bi-name { font-weight: 800; margin-top: 4px; }
+  .bi-desc { font-size: 12.5px; color: #9fb4d0; margin: 4px 0 8px; min-height: 32px; }
+  .bi-price { font-weight: 800; color: #ffd23d; }
+  .buyItem.owned .bi-price { color: #37d67a; }
+  #buyTimer { color: #ffd23d; font-weight: 700; }
+
+  /* ---------- Akhir ronde / pertandingan ---------- */
+  #roundEnd, #matchEnd, #pauseMenu { display: none; }
+  #roundEndStats, #matchStats { font-size: 16px; line-height: 1.9; margin: 12px 0; }
+  .tgl { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 6px 0; }
+  .tgl input { width: 18px; height: 18px; }
+
+  /* ---------- Sentuh ---------- */
+  #touchUI { position: fixed; inset: 0; z-index: 12; pointer-events: none; display: none; }
+  @media (pointer: coarse) { #touchUI { display: block; } }
+  .tbtn { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.4); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+  #btnFire { right: 20px; bottom: 90px; width: 78px; height: 78px; background: rgba(220,60,40,.4); }
+  #btnJump { right: 110px; bottom: 40px; }
+  #btnCrouch { right: 30px; bottom: 190px; }
+  #btnReloadT { right: 110px; bottom: 130px; }
+  #stick { position: absolute; left: 24px; bottom: 40px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.3); pointer-events: auto; }
+  #stickKnob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.35); }
+</style>
+</head>
+<body>
+<div id="vig"></div>
+<div id="dmgVig"></div>
+<div id="killFlash"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i></div>
+  <div id="hitmarker"></div>
+  <div id="topBar"><span id="roundText">Ronde 1 / 9</span><span id="scoreText">Biru 0 — 0 Merah</span><span id="timerText">01:40</span></div>
+  <canvas id="minimap" width="150" height="150"></canvas>
+  <div id="killfeed"></div>
+  <div id="trainHud">🎯 Skor: <span id="trainScore">0</span> &nbsp;•&nbsp; Rekor: <span id="trainBest">0</span></div>
+  <div id="bottomLeft"><div id="hpBarWrap"><div id="hpBar"></div></div><div id="hpText">100 / 100</div></div>
+  <div id="bottomRight"><div id="weaponName">🔫 M4 Assault Rifle</div><div id="ammoText">30 / 30</div><div id="reloadHint">Tekan R — Isi Ulang</div><div id="moneyText">$800</div><div id="smokeCount"></div></div>
+  <div id="roundIntro"></div>
+  <div id="dmgLayer"></div>
+  <div id="toast"></div>
+</div>
+
+<!-- Sentuh -->
+<div id="touchUI">
+  <div id="stick"><div id="stickKnob"></div></div>
+  <div class="tbtn" id="btnFire">🔥</div>
+  <div class="tbtn" id="btnJump">⬆</div>
+  <div class="tbtn" id="btnCrouch">🧎</div>
+  <div class="tbtn" id="btnReloadT">🔄</div>
+</div>
+
+<!-- Menu utama -->
+<div id="menu" class="panel">
+  <div class="card">
+    <h1>🇮🇩 NUSANTARA <span class="flag">STRIKE</span></h1>
+    <p>Pertempuran 5 lawan 5 — <b>Tim Biru</b> melawan <b>Tim Merah</b>. Menang 5 ronde dulu, maksimal 9 ronde. Setiap kill +$300, menang ronde +$1.000. Belanjakan uangmu di fase beli: MP5, SPAS, AWP, Armor, dan Smoke Grenade.</p>
+    <div class="mapPick">
+      <button class="mapBtn sel" data-map="salju"><b>❄️ Puncak Salju</b><span>Salju putih, pohon pinus, jarak pandang jauh</span></button>
+      <button class="mapBtn" data-map="gurun"><b>🏜️ Gurun Pasir</b><span>Pasir panas, kaktus, debu beterbangan</span></button>
+    </div>
+    <div class="btnRow">
+      <button class="btn green" id="btnMulai">▶️ MULAI PERTANDINGAN</button>
+      <button class="btn" id="btnLatih">🎯 LATIHAN TEMBAK</button>
+    </div>
+    <p class="keys" style="margin-top:16px">
+      <b>WASD</b> gerak &nbsp;•&nbsp; <b>Mouse</b> bidik &nbsp;•&nbsp; <b>Klik</b> tembak &nbsp;•&nbsp; <b>R</b> isi ulang<br>
+      <b>Shift</b> jalan pelan &nbsp;•&nbsp; <b>C</b> jongkok &nbsp;•&nbsp; <b>Spasi</b> lompat &nbsp;•&nbsp; <b>G</b> lempar smoke<br>
+      <b>1–4</b> ganti senjata &nbsp;•&nbsp; <b>P / Esc</b> jeda &nbsp;•&nbsp; Menara di tengah peta bisa dinaiki lewat ramp selatan
+    </p>
+    <p style="font-size:12px;color:#7d8ea6">Latihan Tembak: 5 target (3 diam di 6/10/14 meter, 2 bergerak), 60 detik. Rekor tersimpan di perangkatmu.</p>
+  </div>
+</div>
+
+<!-- Menu beli -->
+<div id="buyMenu">
+  <div class="card">
+    <h2>🛒 FASE BELI — <span id="buyMoney">$800</span></h2>
+    <p id="buyTimer">Fase beli berakhir dalam 20 detik</p>
+    <div id="buyGrid"></div>
+    <div class="btnRow"><button class="btn green" id="btnTutupBeli">▶️ MULAI RONDE</button></div>
+    <p style="font-size:12.5px;color:#9fb4d0">Klik item untuk membeli. Senjata yang dimiliki bisa diklik untuk dipakai. Armor menambah 50 HP (maks 150).</p>
+  </div>
+</div>
+
+<!-- Akhir ronde -->
+<div id="roundEnd" class="panel">
+  <div class="card" style="text-align:center">
+    <h2 id="roundEndTitle">🏆 RONDE DIMENANGKAN!</h2>
+    <div id="roundEndStats"></div>
+    <div class="btnRow" style="justify-content:center"><button class="btn green" id="btnLanjut">▶️ RONDE BERIKUTNYA</button></div>
+  </div>
+</div>
+
+<!-- Akhir pertandingan / latihan -->
+<div id="matchEnd" class="panel">
+  <div class="card" style="text-align:center">
+    <h2 id="matchTitle">🏆 TIM BIRU MENANG!</h2>
+    <div id="matchStats"></div>
+    <div class="btnRow" style="justify-content:center">
+      <button class="btn green" id="btnMainLagi">🔁 MAIN LAGI</button>
+      <button class="btn ghost" id="btnKeMenu">🏠 MENU UTAMA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jeda -->
+<div id="pauseMenu" class="panel">
+  <div class="card">
+    <h2>⏸️ JEDA</h2>
+    <label class="tgl"><input type="checkbox" id="tglShake" checked> Kurangi Getaran (matikan goyangan layar)</label>
+    <label class="tgl"><input type="checkbox" id="tglFx" checked> Efek Layar (vignette &amp; kilat sesuai peta)</label>
+    <div class="btnRow">
+      <button class="btn green" id="btnLanjutMain">▶️ LANJUTKAN</button>
+      <button class="btn ghost" id="btnKeluar">🏠 KELUAR KE MENU</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports": {"three": "./vendor/three/three.module.min.js"}}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
