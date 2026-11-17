@@ -48,7 +48,33 @@ Re-authoring session, 2026-11-17. Competition: best-game-01 "Make the best game"
 
 All under the 256 KiB limit. Long side 1280, short side 720.
 
+## Commit / push
+
+- Commit `6999336` ("Re-author Nusantara Strike for best-game-01", 19 files), pushed to `main` on 2026-11-17.
+- GitHub About verified: homepage https://make.fun/c/best-game-01, topic `makefun`, visibility PUBLIC, created 2026-11-16T17:06:54Z.
+- README carries the three live make.fun badges (best-game-01, rank, reward).
+
+## Bundle dry-run (kit CLI, 2026-11-17)
+
+- `--dry-run --no-family` finds 2 sessions: this re-authoring session (abe9ea88…, 114 turns, 398 lines kept) and the earlier repo-creation coordinator session (f8867376…, 17 turns). The 16 older polish sessions are left out with `--no-family`.
+- Resolved: system prompt in-session; instruction file collected (AGENTS.md); MCP servers none (`--mcp none`); provider meta, model muse-spark-1.3, effort default; prompt file `/tmp/best-game-01-prompt.txt` holds the user's verbatim prompt "C. Pivot ke best-game-01" (origin handed-off, via parent agent hand-off from the user's WhatsApp message).
+- NOT resolvable from this subagent session: (1) usage rows — a subagent's rows are written only once its run completes, so the top-level agent (5fbc107b-1013-488d-a73b-ce4b08fc9818) must run the real bundle after this run ends; a bundle without usage rows is rejected where transcripts are required. (2) harness-version — no version is recorded in any Muse app session file (headers carry only format version 1); the parent must declare it with `--harness-version`.
+- Parent bundle command (run from inside the unpacked kit, after this run completes):
+
+```
+node cli/makefun.mjs bundle --repo ~/workspace/makefun-fps/tactical-paws \
+  --out transcripts.tar.gz --no-family \
+  --prompt-file /tmp/best-game-01-prompt.txt --prompt-origin handed-off \
+  --prompt-via "parent agent hand-off from user's WhatsApp message" \
+  --mcp none --provider meta --model muse-spark-1.3 --effort default \
+  --harness-version <version> \
+  --notes "Subagent re-authoring session for best-game-01; parent agent 5fbc107b-1013-488d-a73b-ce4b08fc9818 runs the final bundle after this run completes."
+```
+
+Then: `node cli/makefun.mjs check --kit . --repo ~/workspace/makefun-fps/tactical-paws --transcripts transcripts.tar.gz`.
+
 ## Open items
 
 - Elimination-win / match-end screen not yet proven in a run (round-end proven).
+- Real bundle + check still to run by the parent agent (see above) — NOT done by this session.
 - Submit is user-side (make.fun login @khurota-shoyo + Solana wallet) — NOT done by this session.
