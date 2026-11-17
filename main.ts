@@ -1,3 +1,7 @@
+// Nusantara Strike submission entry: this program collects the finished game
+// in game/ together with its screenshots, hands them to the make.fun dossier
+// builder, and writes out dossier.json, the summary the judge reads.
+// Run it with node and MAKEFUN_OUTPUT_DIR pointing at the output folder.
 // A working best-game-01 entry (Node 22, standard library only): the game is this directory's
 // game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
 // modules, no library and no network request), and the program hands it in. It copies game/ and
